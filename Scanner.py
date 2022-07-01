@@ -57,8 +57,11 @@ class Scanner:
                     self.addToken(tt.SLASH)
             case '"': self.string()
             case _: 
-                #Plox.error(self.line, "Unexpected character.")
-                print(f'{self.line} - Unexpected character.')
+                if self.isDigit(c):
+                    self.number()
+                else:    
+                    #Plox.error(self.line, "Unexpected character.")
+                    print(f'{self.line} - Unexpected character - {c}')
             
     def match(self, expected):
         if self.isAtEnd(): return False
@@ -71,10 +74,29 @@ class Scanner:
         if self.isAtEnd(): return '\0'
         return self.source[self.current]
         
+    def peekNext(self):
+        if self.current + 1 > len(self.source): return '\0'
+        
+        return self.source[self.current + 1]
+        
     def advance(self):
         res = self.source[self.current] 
         self.current += 1
         return res
+    
+    def isDigit(self, c):
+        return '0' <= c and c <= '9'
+        
+    def number(self):
+        while self.isDigit(self.peek()): self.advance()
+        
+        if self.peek() == '.' and self.isDigit(self.peekNext()):
+            # consume .
+            self.advance()
+            
+            while self.isDigit(self.peek()): self.advance()
+            
+        self.addToken(tt.NUMBER, float(self.source[self.start:self.current]))
     
     def string(self):
         while self.peek() != '\"' and not self.isAtEnd():
