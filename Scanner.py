@@ -11,8 +11,11 @@ class Scanner:
         self.line = 1
     
     def scanTokens(self):
+        # Prevent multiple executions adding additional EoF token
+        if self.isAtEnd():
+            return self.tokens
+        
         while not self.isAtEnd():
-            print(f'start: {self.start}, current: {self.current}')
             self.start = self.current
             self.scanToken();
         
@@ -52,6 +55,7 @@ class Scanner:
                     while self.peek() != '\n' and not self.isAtEnd(): self.advance()
                 else:
                     self.addToken(tt.SLASH)
+            case '"': self.string()
             case _: 
                 #Plox.error(self.line, "Unexpected character.")
                 print(f'{self.line} - Unexpected character.')
@@ -71,6 +75,21 @@ class Scanner:
         res = self.source[self.current] 
         self.current += 1
         return res
+    
+    def string(self):
+        while self.peek() != '\"' and not self.isAtEnd():
+            if self.peek() == '\n': self.line += 1
+            self.advance()
+            
+        if self.isAtEnd():
+            #Plox.error(self.line, "Unterminated string.")
+            print(f'{self.line} - Unterminated string.')
+            
+        # Consume "
+        self.advance()
+        
+        value = self.source[self.start + 1: self.current - 1]
+        self.addToken(tt.STRING, value)
     
     def addToken(self, _type: TokenType, literal=None):
         text = self.source[self.start: self.current]
