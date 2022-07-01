@@ -1,4 +1,5 @@
 import sys
+from Constants.TokenType import TokenType
 
 class Plox:
     def __init__(self, args):
