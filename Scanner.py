@@ -1,4 +1,5 @@
 from Constants.TokenType import TokenType as tt, TokenType
+from Constants.TokenType import keywords as TokenKeyword
 from Token import Token
 from Plox import Plox
 
@@ -22,8 +23,7 @@ class Scanner:
         self.tokens.append(Token(tt.EOF, "", None, self.line))
         return self.tokens
         
-    def isAtEnd(self):
-        return self.current >= len(self.source)
+
         
     def scanToken(self):
         c = self.advance()
@@ -51,14 +51,25 @@ class Scanner:
             case '>':
                 self.addToken(tt.GREATER_EQUAL if self.match('=') else tt.GREATER)
             case '/':
+                
                 if self.match('/'):
-                    while self.peek() != '\n' and not self.isAtEnd(): self.advance()
+                    while not self.isAtEnd() and self.peek() != '\n': 
+                        print(self.current)
+                        self.advance()
+                elif self.match('*'):
+                    while not self.isAtEnd() and (self.peek() != '*' and self.peekNext() != '/'): 
+                        self.advance()
+                    # Consume final */
+                    self.advance()
+                    self.advance()
                 else:
                     self.addToken(tt.SLASH)
             case '"': self.string()
             case _: 
-                if self.isDigit(c):
+                if isDigit(c):
                     self.number()
+                elif isAlpha(c):
+                    self.identifier()
                 else:    
                     #Plox.error(self.line, "Unexpected character.")
                     print(f'{self.line} - Unexpected character - {c}')
@@ -69,40 +80,46 @@ class Scanner:
         
         self.current += 1
         return True
-        
+    
+    def isAtEnd(self):
+        return self.current >= len(self.source)
+    
     def peek(self):
         if self.isAtEnd(): return '\0'
         return self.source[self.current]
         
     def peekNext(self):
-        if self.current + 1 > len(self.source): return '\0'
-        
+        if self.current >= len(self.source): return '\0'
         return self.source[self.current + 1]
         
     def advance(self):
-        res = self.source[self.current] 
+        res = self.source[self.current]
         self.current += 1
         return res
-    
-    def isDigit(self, c):
-        return '0' <= c and c <= '9'
         
     def number(self):
-        while self.isDigit(self.peek()): self.advance()
+        while isDigit(self.peek()): self.advance()
         
-        if self.peek() == '.' and self.isDigit(self.peekNext()):
+        if self.peek() == '.' and isDigit(self.peekNext()):
             # consume .
             self.advance()
             
-            while self.isDigit(self.peek()): self.advance()
+            while isDigit(self.peek()): self.advance()
             
         self.addToken(tt.NUMBER, float(self.source[self.start:self.current]))
     
+    def identifier(self):
+        while isAlphaNumeric(self.peek()): self.advance()
+        self.addToken(tt.IDENTIFIER)
+    
     def string(self):
+        
         while self.peek() != '\"' and not self.isAtEnd():
-            if self.peek() == '\n': self.line += 1
+            if self.peek() == '\n': 
+                self.line += 1
             self.advance()
-            
+        
+        # Fixed edge case of end terminated string
         if self.isAtEnd():
             #Plox.error(self.line, "Unterminated string.")
             print(f'{self.line} - Unterminated string.')
@@ -116,3 +133,15 @@ class Scanner:
     def addToken(self, _type: TokenType, literal=None):
         text = self.source[self.start: self.current]
         self.tokens.append(Token(_type, text, literal, self.line))
+    
+@staticmethod
+def isAlpha(c):
+    return ('a' <= c and c <= 'z') or ('A' <= c and c <= 'Z') or (c == '_')
+
+@staticmethod    
+def isDigit(c):
+    return '0' <= c and c <= '9'
+
+@staticmethod
+def isAlphaNumeric(c):
+    return isAlpha(c) or isDigit(c)
